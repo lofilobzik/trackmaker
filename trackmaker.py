@@ -4,7 +4,7 @@ import time
 
 def func(*args):
     print(*args)
-    return True
+    return False
 
 class Application:
     def __init__(self, master, function):
@@ -41,13 +41,13 @@ class Application:
         self.frame = tk.Frame(self.master)
         self.frame.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 
-        self.forward_b = tk.Button(self.frame, text='^', command=lambda event=None, dir='forward', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel))
-        self.left_b = tk.Button(self.frame, text='<', command=lambda event=None, dir='left', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel))
-        self.back_b = tk.Button(self.frame, text='v', command=lambda event=None, dir='back', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel))
-        self.right_b = tk.Button(self.frame, text='>', command=lambda event=None, dir='right', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel))
+        self.forward_b = tk.Button(self.frame, text='^', command=lambda event=None, dir='forward', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+        self.left_b = tk.Button(self.frame, text='<', command=lambda event=None, dir='left', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+        self.back_b = tk.Button(self.frame, text='v', command=lambda event=None, dir='back', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+        self.right_b = tk.Button(self.frame, text='>', command=lambda event=None, dir='right', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
 
-        self.turn_left_b = tk.Button(self.frame, text='<<', command=lambda event=None, dir='turn_left', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel))
-        self.turn_right_b = tk.Button(self.frame, text='>>', command=lambda event=None, dir='turn_right', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel))
+        self.turn_left_b = tk.Button(self.frame, text='<<', command=lambda event=None, dir='turn_left', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+        self.turn_right_b = tk.Button(self.frame, text='>>', command=lambda event=None, dir='turn_right', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
 
         self.discard_b = tk.Button(self.frame, text='Discard', command=self.discard_move)
 
@@ -128,9 +128,8 @@ class Application:
         self.frame_7 = tk.Frame(self.master)
         self.frame_7.grid(row=6, column=0, sticky='nsew', padx=20, pady=10)
 
-        self.status = tk.Label(self.frame_7, text='⚫ Last command successful', fg='green')
-        # self.status = tk.Label(self.frame_7, text='⨯ Couldn\'t transmit', fg='red')
-        self.status.pack(side='left')
+        self.status_label = tk.Label(self.frame_7, text='')
+        self.status_label.pack(side='left')
 
         self.rec_label = tk.Label(self.frame_7, text='⚫', fg='red')
         self.rec_label.pack(side='right')
@@ -138,10 +137,10 @@ class Application:
 
     def bindings(self):
         # Disable keys if tk.Entry is focused
-        self.master.bind('<Up>', lambda event, dir='forward', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
-        self.master.bind('<Left>', lambda event, dir='left', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
-        self.master.bind('<Down>', lambda event, dir='back', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
-        self.master.bind('<Right>', lambda event, dir='right', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, step, speed, accel) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
+        self.master.bind('<Up>', lambda event, dir='forward', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
+        self.master.bind('<Left>', lambda event, dir='left', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
+        self.master.bind('<Down>', lambda event, dir='back', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
+        self.master.bind('<Right>', lambda event, dir='right', step = self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step) if str(self.master.focus_get()) != '.!frame2.!entry' else 0)
 
         # <Escape> to unfocus tk.Entry; <Return> to focus if unfocused and run self.change_step if focused
         self.master.bind('<Return>', lambda event, var=self.enter_step: self.change_step(var) if str(self.master.focus_get()) != '.' else self.enter_step.focus_set())
@@ -152,7 +151,7 @@ class Application:
             var = var.get()
             self.display_step.configure(text=f'Default steps: {int(var)}') # filters non-integers
             self.step.set(var)
-            self.enter_step['textvariable'] = tk.StringVar(value='')
+            self.enter_step.configure(textvariable=tk.StringVar(value=''))
         except ValueError:
             pass
 
@@ -170,9 +169,12 @@ class Application:
         else:
             filename = asksaveasfilename(initialfile = time.strftime('%Y%m%d-%H%M%S') + '.txt', defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
             
-            with open(filename, 'w') as file:
-                for step in self.route:
-                    file.write(' '.join(map(str, step)) + '\n')
+            try:
+                with open(filename, 'w') as file:
+                    for step in self.route:
+                        file.write(' '.join(map(str, step)) + '\n')
+            except TypeError:
+                pass
 
             self.rec_b.configure(text='Record')
 
@@ -183,10 +185,10 @@ class Application:
             self.rec_label.configure(text='')
         self.master.after(1000, self.update_rec_label)
 
-    def move(self, event, dir, step, speed, accel):
-        step = int(step.get())
+    def move(self, event, dir, speed, accel, step):
         speed = int(speed.get())
         accel = int(accel.get())
+        step = int(step.get())
 
         try:
             step = int(self.enter_step.get())
@@ -195,17 +197,24 @@ class Application:
             pass
 
         if self.is_recording:
-            self.route.append([dir, step, speed, accel])
+            self.route.append([dir, speed, accel, step])
 
-        reply = self.function(dir, step, speed, accel)
+        reply = self.function(dir, speed, accel, step)
+        self.change_status(reply)
 
     def discard_move(self):
         try:
             step = self.route.pop()
             reply = self.function(step[0], -step[1], step[2], step[3])
-
+            self.change_status(reply)
         except IndexError:
             pass
+
+    def change_status(self, reply):
+        if reply:
+            self.status_label.configure(text='⚫ Last command successful', fg='green')
+        else:
+            self.status_label.configure(text='⨯ Couldn\'t transmit', fg='red')
 
 def main():
     root = tk.Tk()
