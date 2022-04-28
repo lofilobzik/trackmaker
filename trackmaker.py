@@ -4,7 +4,7 @@ from tkinter.messagebox import askyesnocancel
 from pathlib import Path
 
 def func(*args):
-    print(*args)
+    # print(*args)
     return False
 
 class Application:
@@ -285,7 +285,6 @@ class Application:
     def focus_on_master(self, event=None):
         x,y = self.master.winfo_pointerxy()                   # get the mouse position on screen
         widget = self.master.winfo_containing(x,y)
-        print(widget)  
         if str(widget) not in ('.!frame.!frame2.!entry', '.!frame2.!frame.!listbox'):
             self.master.focus_set()
 
@@ -333,14 +332,20 @@ class Application:
         self.steps_list.selection_anchor(index)
 
     def file_open(self, event=None):
-        filename = askopenfilename(defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
+        if self.is_recording:
+                self.change_rec_status()
 
+        filename = askopenfilename(defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
+        if filename == '':
+            return
         if not self.is_initial_file() and not self.is_file_saved:
             answer = askyesnocancel('Quit', 'Opened file contains unsaved changes. Would you like to save them?')
             if answer == True:
                 self.file_save()
             elif answer == False:
                 pass
+            elif answer == None:
+                return
 
         try:
             with open(filename, 'r') as file:
@@ -349,8 +354,6 @@ class Application:
                     if self.to_list(line):
                         self.steps_list.insert('end', line.strip('\n'))
 
-            if self.is_recording:
-                self.change_rec_status()
             self.filename = filename
             self.update_title(is_file_saved=True)
         except TypeError:
@@ -358,10 +361,10 @@ class Application:
         except FileNotFoundError:
             pass
 
-        print(self.filename)
-
     def file_save(self, event=None, saveas=False):
-        print(saveas)
+        if self.is_recording:
+                self.change_rec_status()
+
         if saveas or self.filename == 'Untitled.txt':
             self.filename = asksaveasfilename(initialfile=Path(self.filename).name, defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
 
@@ -397,7 +400,6 @@ class Application:
                 self.master.destroy()
 
     def is_initial_file(self):
-        print(not self.is_file_saved, Path(self.filename).name == 'Untitled.txt', len(self.steps_list.get(0, 'end')) == 0)
         return not self.is_file_saved and Path(self.filename).name == 'Untitled.txt' and len(self.steps_list.get(0, 'end')) == 0
 
     def to_str(self, l):
