@@ -2,17 +2,16 @@ import tkinter as tk
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter.messagebox import askyesnocancel
 from pathlib import Path
-import time
 
 def func(*args):
+    print(*args)
     return False
 
 class Application:
     def __init__(self, master, function):
         self.master = master
-        self.master.geometry('430x400')
-        self.master.minsize(430, 400)
-        self.master.maxsize(630, 600)
+        self.master.geometry('400x400')
+        self.master.minsize(430, 430)
         self.master.protocol('WM_DELETE_WINDOW', self.on_closing)
 
         self.master.rowconfigure(0, weight=1)
@@ -174,7 +173,7 @@ class Application:
         self.step_down = tk.Button(self.frame_9, text='v', command=lambda: self.switch_step_position(dir='down'))
         self.step_down.grid(row=0, column=1, sticky='nsew')
 
-        self.step_settings = tk.Button(self.frame_9, text='Properties', command=lambda: print(self.master.winfo_width(), self.master.winfo_height()))
+        self.step_settings = tk.Button(self.frame_9, text='Properties', command=lambda: self.master.focus_get())
         self.step_settings.grid(row=0, column=2, sticky='nsew', columnspan=3)
 
         self.frame_9.columnconfigure(0, weight=0)
@@ -189,7 +188,7 @@ class Application:
         self.file_menu = tk.Menu(self.menu, tearoff=0)
         self.file_menu.add_command(label='Open', command=self.file_open, accelerator='Ctrl+O')
         self.file_menu.add_command(label='Save', command=self.file_save, accelerator='Ctrl+S')
-        self.file_menu.add_command(label='Save as...', command=lambda saveas=True: self.file_save(saveas), accelerator='Ctrl+Shift+S')
+        self.file_menu.add_command(label='Save as...', command=lambda: self.file_save(saveas=True), accelerator='Ctrl+Shift+S')
         self.menu.add_cascade(label='File', menu=self.file_menu)
 
     def bindings(self):
@@ -204,6 +203,8 @@ class Application:
 
         self.master.bind('<Return>', lambda event, var=self.enter_step: self.change_step(var) if str(self.master.focus_get()) != '.' else self.enter_step.focus_set())
         self.master.bind('<Escape>', lambda event: self.escape_event(event))
+
+        self.master.bind('<Button-1>', lambda event: self.focus_on_master(event))
 
     def change_step(self, var, event=None):
         try:
@@ -259,8 +260,12 @@ class Application:
             step = self.steps_list.get('end')
             self.steps_list.delete('end')
             step = self.to_list(step)
-            reply = self.function(step[0], -step[1], step[2], step[3])
-            self.change_status(reply)
+            try:
+                reply = self.function(step[0], -step[1], step[2], step[3])
+                self.change_status(reply)
+                self.update_title(is_file_saved=False)
+            except TypeError:
+                pass
         except IndexError:
             pass
 
@@ -270,11 +275,18 @@ class Application:
         else:
             self.status_label.configure(text='⨯ Couldn\'t transmit', fg='red')
 
-    def escape_event(self, event):
+    def escape_event(self, event=None):
         if str(self.master.focus_get()) == '.':
             if self.is_recording == True:
                 self.change_rec_status()
         else:
+            self.master.focus_set()
+
+    def focus_on_master(self, event=None):
+        x,y = self.master.winfo_pointerxy()                   # get the mouse position on screen
+        widget = self.master.winfo_containing(x,y)
+        print(widget)  
+        if str(widget) not in ('.!frame.!frame2.!entry', '.!frame2.!frame.!listbox'):
             self.master.focus_set()
 
     def switch_step_position(self, dir):
@@ -311,6 +323,8 @@ class Application:
 
         self.steps_select(needed_pos)
 
+        self.update_title(is_file_saved=False)
+
     def steps_select(self, index):
         self.steps_list.select_clear(0, 'end')
         self.steps_list.selection_set(index)
@@ -321,12 +335,22 @@ class Application:
     def file_open(self, event=None):
         filename = askopenfilename(defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
 
+        if not self.is_initial_file() and not self.is_file_saved:
+            answer = askyesnocancel('Quit', 'Opened file contains unsaved changes. Would you like to save them?')
+            if answer == True:
+                self.file_save()
+            elif answer == False:
+                pass
+
         try:
             with open(filename, 'r') as file:
+                self.steps_list.delete(0, 'end')
                 for line in file.readlines():
                     if self.to_list(line):
                         self.steps_list.insert('end', line.strip('\n'))
 
+            if self.is_recording:
+                self.change_rec_status()
             self.filename = filename
             self.update_title(is_file_saved=True)
         except TypeError:
@@ -334,29 +358,34 @@ class Application:
         except FileNotFoundError:
             pass
 
+        print(self.filename)
+
     def file_save(self, event=None, saveas=False):
+        print(saveas)
         if saveas or self.filename == 'Untitled.txt':
-            self.filename = asksaveasfilename(initialfile=Path(self.filename).name if self.filename == 'Untitled.txt' else 'Untitled.txt', defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
+            self.filename = asksaveasfilename(initialfile=Path(self.filename).name, defaultextension='.txt',filetypes=[('All Files','*.*'), ('Text Documents','*.txt')])
 
         if not self.filename:
             self.filename = 'Untitled.txt'
             return
 
-        self.update_title(is_file_saved=True)
-
         with open(self.filename, 'w') as file:
             for step in self.steps_list.get(0, 'end'):
                 file.write(step + '\n')
 
+        if self.is_recording:
+                self.change_rec_status()
+        self.update_title(is_file_saved=True)
+
     def update_title(self, is_file_saved):
         self.is_file_saved = is_file_saved
         if is_file_saved:
-            self.master.title(Path(self.filename).name)
+            self.master.title(Path(self.filename).name + ' — trackmaster')
         else:
-            self.master.title(Path(self.filename).name + '*')
+            self.master.title(Path(self.filename).name + '*' + ' — trackmaster')
 
     def on_closing(self):
-        if self.is_file_saved:
+        if self.is_initial_file() or self.is_file_saved:
             self.master.destroy()
         else:
             answer = askyesnocancel('Quit', 'Opened file contains unsaved changes. Would you like to save them?')
@@ -366,6 +395,10 @@ class Application:
                 self.master.destroy()
             elif answer == False:
                 self.master.destroy()
+
+    def is_initial_file(self):
+        print(not self.is_file_saved, Path(self.filename).name == 'Untitled.txt', len(self.steps_list.get(0, 'end')) == 0)
+        return not self.is_file_saved and Path(self.filename).name == 'Untitled.txt' and len(self.steps_list.get(0, 'end')) == 0
 
     def to_str(self, l):
         return ' '.join(map(str, l))
