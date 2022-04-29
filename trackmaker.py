@@ -4,10 +4,11 @@ from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter.messagebox import askyesnocancel
 from pathlib import Path
 
-
+# Test function
+import random
 def func(*args):
-    # print(*args)
-    return False
+    print(*args)
+    return random.choice([True, False])
 
 
 class Application:
@@ -66,18 +67,18 @@ class Application:
         self.frame_1.grid(row=0, column=0, sticky='nsew', padx=0, pady=0)
 
         self.forward_b = Button(self.frame_1, text='^', command=lambda event=None, dir='forward',
-                                step=self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+                                step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(event, dir, speed, accel, step))
         self.left_b = Button(self.frame_1, text='<', command=lambda event=None, dir='left',
-                             step=self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+                             step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(event, dir, speed, accel, step))
         self.back_b = Button(self.frame_1, text='v', command=lambda event=None, dir='back',
-                             step=self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+                             step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(event, dir, speed, accel, step))
         self.right_b = Button(self.frame_1, text='>', command=lambda event=None, dir='right',
-                              step=self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+                              step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(event, dir, speed, accel, step))
 
         self.turn_left_b = Button(self.frame_1, text='<<', command=lambda event=None, dir='turn_left',
-                                  step=self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+                                  step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(event, dir, speed, accel, step))
         self.turn_right_b = Button(self.frame_1, text='>>', command=lambda event=None, dir='turn_right',
-                                   step=self.step, speed=self.speed, accel=self.accel: self.move(event, dir, speed, accel, step))
+                                   step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(event, dir, speed, accel, step))
 
         self.discard_b = Button(
             self.frame_1, text='Discard', command=self.discard_move)
@@ -220,17 +221,17 @@ class Application:
         self.menu.add_cascade(label='File', menu=self.file_menu)
 
     def bindings(self):
-        self.master.bind('<Up>', lambda event, dir='forward', step=self.step, speed=self.speed, accel=self.accel: self.move(
+        self.master.bind('<Up>', lambda event, dir='forward', step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(
             event, dir, speed, accel, step) if str(self.master.focus_get()) == '.' else 0)
-        self.master.bind('<Left>', lambda event, dir='left', step=self.step, speed=self.speed, accel=self.accel: self.move(
+        self.master.bind('<Left>', lambda event, dir='left', step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(
             event, dir, speed, accel, step) if str(self.master.focus_get()) == '.' else 0)
-        self.master.bind('<Down>', lambda event, dir='back', step=self.step, speed=self.speed, accel=self.accel: self.move(
+        self.master.bind('<Down>', lambda event, dir='back', step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(
             event, dir, speed, accel, step) if str(self.master.focus_get()) == '.' else 0)
-        self.master.bind('<Right>', lambda event, dir='right', step=self.step, speed=self.speed, accel=self.accel: self.move(
+        self.master.bind('<Right>', lambda event, dir='right', step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(
             event, dir, speed, accel, step) if str(self.master.focus_get()) == '.' else 0)
-        self.master.bind('<comma>', lambda event, dir='turn_left', step=self.step, speed=self.speed, accel=self.accel: self.move(
+        self.master.bind('<comma>', lambda event, dir='turn_left', step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(
             event, dir, speed, accel, step) if str(self.master.focus_get()) == '.' else 0)
-        self.master.bind('<period>', lambda event, dir='turn_right', step=self.step, speed=self.speed, accel=self.accel: self.move(
+        self.master.bind('<period>', lambda event, dir='turn_right', step=self.step, speed=self.speed, accel=self.accel: self.move_from_buttons(
             event, dir, speed, accel, step) if str(self.master.focus_get()) == '.' else 0)
 
         self.master.bind('<Control_L><o>', self.file_open)
@@ -275,7 +276,7 @@ class Application:
             self.rec_label.configure(text='')
         self.master.after(1000, self.update_rec_label)
 
-    def move(self, event, dir, speed, accel, step):
+    def move_from_buttons(self, event, dir, speed, accel, step):
         speed = int(speed.get())
         accel = int(accel.get())
         step = int(step.get())
@@ -293,6 +294,9 @@ class Application:
                 'end', self.to_str([dir, speed, accel, step]))
             self.steps_list.see('end')
 
+        self.move(dir, speed, accel, step)
+
+    def move(self, dir, speed, accel, step):
         reply = self.function(dir, speed, accel, step)
         self.change_status(reply)
 
@@ -374,18 +378,19 @@ class Application:
         self.update_title(is_file_saved=False)
 
     def change_step_properties(self):
+        try:
+            self.current_pos = self.steps_list.curselection()[0]
+        except IndexError:
+            return
+
+        if self.is_recording:
+            self.change_rec_status()
+
         self.properties_b.configure(state='disabled')
         self.step_up.configure(state='disabled')
         self.step_down.configure(state='disabled')
         self.discard_b.configure(state='disabled')
         self.rec_b.configure(state='disabled')
-        if self.is_recording:
-            self.change_rec_status()
-        try:
-            self.current_pos = self.steps_list.curselection()[0]
-        except IndexError:
-            self.properties_b.configure(state='normal')
-            return
 
         val = self.steps_list.get(self.current_pos)
         self.steps_list.configure(state='disabled')
@@ -491,10 +496,25 @@ class Application:
     def change_step_by_one(self, dir):
         step = self.prop_step.get()
 
-        if dir == 'up':
-            self.prop_step.configure(textvariable=StringVar(value=int(step)+1))
-        elif dir == 'down':
-            self.prop_step.configure(textvariable=StringVar(value=int(step)-1))
+        try:
+            if dir == 'up':
+                self.prop_step.configure(
+                    textvariable=StringVar(value=int(step)+1))
+                step = '1'
+            elif dir == 'down':
+                self.prop_step.configure(
+                    textvariable=StringVar(value=int(step)-1))
+                step = '-1'
+        except ValueError:
+            return
+
+        dir = self.prop_dir.get()
+        speed = self.prop_speed.get()
+        accel = self.prop_accel.get()
+
+        s = f'{dir} {speed} {accel} {step}'
+        l = self.to_list(s)
+        self.move(*l)
 
     def steps_select_index(self, index):
         self.steps_list.select_clear(0, 'end')
