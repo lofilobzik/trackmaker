@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
+
 from tkinter import *
-from tkinter.ttk import Combobox
+from tkinter.ttk import Combobox, Style
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from tkinter.messagebox import askyesnocancel
 from pathlib import Path
@@ -528,7 +530,7 @@ class Application:
             self.change_rec_status()
 
         filename = askopenfilename(defaultextension='.txt', filetypes=[
-                                   ('All Files', '*.*'), ('Text Documents', '*.txt')])
+            ('Text Documents', '*.txt')])
         if filename == '':
             return
         if not self.is_initial_file() and not self.is_file_saved:
@@ -561,7 +563,7 @@ class Application:
 
         if saveas or self.filename == 'Untitled.txt':
             self.filename = asksaveasfilename(initialfile=Path(self.filename).name, defaultextension='.txt', filetypes=[
-                                              ('All Files', '*.*'), ('Text Documents', '*.txt')])
+                                              ('Text Documents', '*.txt')])
 
         if not self.filename:
             self.filename = 'Untitled.txt'
